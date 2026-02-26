@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的工具箱</title>
+    <style>
+        body { margin: 0; display: flex; height: 100vh; font-family: sans-serif; overflow: hidden; }
+        
+        /* 左侧侧边栏 */
+        .sidebar {
+            width: 200px;
+            background: #2c3e50;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            padding: 20px 0;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+        }
+
+        .tab-btn {
+            padding: 15px 20px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            color: #bdc3c7;
+            text-align: left;
+            font-size: 16px;
+            transition: 0.3s;
+        }
+
+        .tab-btn:hover { background: #34495e; color: white; }
+        .tab-btn.active { background: #3498db; color: white; font-weight: bold; }
+
+        /* 右侧内容区 */
+        .content { flex: 1; border: none; }
+        iframe { width: 100%; height: 100%; border: none; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div style="padding: 0 20px 20px; font-size: 20px; font-weight: bold; border-bottom: 1px solid #3e5871; margin-bottom: 10px;">
+            工具箱
+        </div>
+        <button class="tab-btn active" onclick="loadPage('invoice.html', this)">发票工具 (Invoice)</button>
+        <button class="tab-btn" onclick="loadPage('offer.html', this)">报价工具 (Offer)</button>
+        <button class="tab-btn" onclick="loadPage('quote.html', this)">核价工具 (Quote)</button>
+    </div>
+
+    <div class="content">
+        <iframe id="mainFrame" src="invoice.html"></div>
+    </div>
+
+    <script>
+        function loadPage(pageUrl, element) {
+            // 切换 iframe 链接
+            document.getElementById('mainFrame').src = pageUrl;
+
+            // 切换按钮高亮状态
+            const buttons = document.querySelectorAll('.tab-btn');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            element.classList.add('active');
+        }
+    </script>
+</body>
+</html>

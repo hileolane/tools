@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>报价信息提取器 - 智能追溯版</title>
+    <style>
+        body { font-family: sans-serif; padding: 30px; line-height: 1.6; background-color: #fcfcfc; color: #333; }
+        .container { max-width: 900px; margin: auto; }
+        textarea { width: 100%; height: 180px; margin-bottom: 15px; padding: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        #output { background: #f4f4f4; padding: 20px; white-space: pre-wrap; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; min-height: 50px; }
+        .btn-group { margin-bottom: 10px; }
+        button { padding: 12px 25px; cursor: pointer; border: none; border-radius: 4px; font-size: 15px; transition: all 0.2s; margin-right: 10px; }
+        .btn-process { background: #007bff; color: white; }
+        .btn-copy { background: #28a745; color: white; }
+        .btn-copy:disabled { background: #6c757d; cursor: not-allowed; }
+        .btn-clear { background: #dc3545; color: white; }
+        .hint { font-size: 12px; color: #888; margin-top: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>采购报价整理CN-EN</h2>
+        <textarea id="input" placeholder="粘贴报价信息至此..."></textarea>
+        
+        <div class="btn-group">
+            <button class="btn-process" onclick="processData()">整理并翻译</button>
+            <button id="copyBtn" class="btn-copy" onclick="copyToClipboard()" disabled>一键复制结果</button>
+            <button class="btn-clear" onclick="clearAll()">手动清空</button>
+        </div>
+        <div class="hint">* 逻辑优化：若货期写在最后，将自动应用到上方所有相关产品。</div>
+
+        <h3>预览结果：</h3>
+        <div id="output">等待转换...</div>
+    </div>
+
+    <script>
+        function translateDelivery(text) {
+            if (!text) return "";
+            const mapping = { "周": " Weeks", "天": " Days", "日": " Days", "月": " Months" };
+            let translated = text.replace(/[到至]/g, "-");
+            for (let key in mapping) { if (text.includes(key)) { translated = translated.replace(key, mapping[key]); break; } }
+            return translated;
+        }
+
+        function clearAll() {
+            document.getElementById('input').value = "";
+            document.getElementById('output').innerText = "等待转换...";
+            document.getElementById('copyBtn').disabled = true;
+            document.getElementById('input').focus();
+        }
+
+        function processData() {
+            const input = document.getElementById('input').value;
+            const lines = input.split('\n');
+            let results = [];
+            let lastPotentialModel = ""; 
+            let itemsAwaitingDelivery = []; // 暂存没有货期的条目对象引用
+
+            lines.forEach(line => {
+                let currentLine = line.trim();
+                if (!currentLine) return;
+
+                const priceMatch = currentLine.match(/(?:单价|价|为)\s*(\d+(?:\.\d+)?)|(\d+(?:\.\d+)?)\s*元/);
+                const deliveryMatch = currentLine.match(/(\d+[-到至]\d+|\d+)\s*(周|天|日|月)/);
+                
+                let splitIndex = currentLine.search(/[(（]|单价|含税|价为|数量|\d+\s*元/);
+                let currentModel = "";
+
+                if (splitIndex !== -1) {
+                    currentModel = currentLine.substring(0, splitIndex).trim().replace(/[,，:：\s]+$/, "");
+                }
+
+                // 核心解析逻辑
+                if (priceMatch) {
+                    let finalModel = currentModel || lastPotentialModel || "Unknown Model";
+                    let item = {
+                        model: finalModel,
+                        price: priceMatch[1] || priceMatch[2],
+                        delivery: deliveryMatch ? translateDelivery(deliveryMatch[0]) : ""
+                    };
+                    results.push(item);
+                    
+                    // 如果这一行没货期，放进待处理队列
+                    if (!item.delivery) {
+                        itemsAwaitingDelivery.push(item);
+                    } else {
+                        // 如果这一行自带货期，之前待处理的条目是否要跟随？
+                        // 通常建议保留 itemsAwaitingDelivery 直到遇到完全独立的货期行
+                    }
+                    lastPotentialModel = ""; 
+                } else if (deliveryMatch && !priceMatch) {
+                    // 关键改进：如果这一行只有货期，把它填给之前所有等待货期的条目
+                    let transDeli = translateDelivery(deliveryMatch[0]);
+                    itemsAwaitingDelivery.forEach(item => {
+                        item.delivery = transDeli;
+                    });
+                    itemsAwaitingDelivery = []; // 清空队列
+                } else if (!deliveryMatch && !priceMatch) {
+                    if (currentLine.length > 2 && !currentLine.startsWith("INQ")) {
+                        lastPotentialModel = currentLine;
+                    }
+                }
+            });
+
+            if (results.length > 0) {
+                let header = "Please kindly check our offer:\n\n";
+                let body = results.map(res => 
+                    `Model: ${res.model}\nUnit Price: ${res.price} RMB\nDelivery Time: ${res.delivery || "TBD"}\n------------------------------`
+                ).join('\n');
+                let footer = "\nIf any questions or feedback, please let us know. Thanks.";
+                document.getElementById('output').innerText = header + body + footer;
+                document.getElementById('copyBtn').disabled = false;
+            } else {
+                document.getElementById('output').innerText = "未识别到有效数据。";
+                document.getElementById('copyBtn').disabled = true;
+            }
+        }
+
+        async function copyToClipboard() {
+            const text = document.getElementById('output').innerText;
+            const btn = document.getElementById('copyBtn');
+            try {
+                await navigator.clipboard.writeText(text);
+                const oldText = btn.innerText;
+                btn.innerText = "已复制 √ (即将重置)";
+                setTimeout(() => { clearAll(); btn.innerText = oldText; }, 1500);
+            } catch (err) { alert('复制失败'); }
+        }
+    </script>
+</body>
+</html>

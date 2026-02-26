@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>AMiT Invoice Tool - Professional Final</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        body { font-family: 'Helvetica', 'Arial', sans-serif; background: #e9ecef; display: flex; flex-direction: column; align-items: center; padding: 40px; }
+        .editor-card { background: white; width: 850px; padding: 50px; border-radius: 4px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); }
+        .controls { margin-bottom: 25px; display: flex; gap: 15px; }
+        .btn { padding: 12px 25px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .btn-add { background: #28a745; color: white; }
+        .btn-export { background: #000; color: white; }
+        .btn:hover { opacity: 0.8; transform: translateY(-1px); }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 30px; }
+        th { background: #f2f2f2; border: 1px solid #d1d1d1; padding: 8px 12px; text-align: left; font-size: 13px; color: #000; font-weight: bold; }
+        td { border: 1px solid #d1d1d1; padding: 6px 12px; color: #000; font-size: 15px; }
+        input { border: 1px solid transparent; width: 100%; padding: 2px 5px; font-size: 15px; color: #000; }
+        input:focus { border: 1px solid #007bff; outline: none; background: #fdfdfd; }
+        
+        .summary-box { float: right; width: 280px; margin-top: 20px; }
+        .summary-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 14px; color: #000; }
+        .bank-info { margin-top: 100px; font-size: 14px; line-height: 1.8; color: #000; border-top: 2px solid #eee; padding-top: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="controls">
+    <button class="btn btn-add" onclick="addRow()">+ 增加项目 (Add Item)</button>
+    <button class="btn btn-export" onclick="exportPDF()">下载正式 PDF</button>
+</div>
+
+<div class="editor-card">
+    <div style="display: flex; justify-content: space-between;">
+        <div style="font-size: 14px; line-height: 1.6; color: #333;">
+            <strong style="font-size: 18px; color: #000;">Personal Service</strong><br>
+            <span style="font-size: 16px; color: #000;">LEI JIAN</span><br>
+            Hangzhou City, Zhejiang Province, China<br>
+            Phone: 0086-13588213363<br>
+            Email: hileolane@gmail.com
+        </div>
+        <div style="text-align: right;">
+            <h1 style="margin: 0 0 15px 0; font-size: 36px; font-weight: bold; letter-spacing: 4px; color: #000;">INVOICE</h1>
+            <div style="font-size: 14px; color: #000;">
+                DATE: <input type="text" id="invDate" style="width:120px; text-align:right;"><br>
+                INVOICE #: <input type="text" id="invNum" style="width:120px; text-align:right;"><br>
+                DUE DATE: <input type="text" id="dueDate" style="width:120px; text-align:right;">
+            </div>
+        </div>
+    </div>
+
+    <div style="margin-top: 40px; width: 400px; font-size: 14px;">
+        <div style="background: #f2f2f2; font-weight: bold; padding: 6px 10px; border: 1px solid #d1d1d1; border-bottom: none; color: #000;">BILL TO</div>
+        <div style="border: 1px solid #d1d1d1; padding: 15px; line-height: 1.8; color: #000;">
+            <span style="display: block; margin-bottom: 2px;">Ing. Blanka Mikulášková</span>
+            <strong style="font-size: 18px; display: block; margin: 5px 0;">AMIT Service s.r.o.</strong>
+            Radlická 740/113C, Praha 5, 158 00<br>
+            DIC: CZ21260257
+        </div>
+    </div>
+
+    <table id="mainTable">
+        <thead>
+            <tr>
+                <th>DESCRIPTION</th>
+                <th width="80">MONTH</th>
+                <th width="120">RATE</th>
+                <th width="120">AMOUNT</th>
+                <th width="40"></th>
+            </tr>
+        </thead>
+        <tbody id="tableBody">
+            <tr>
+                <td><input type="text" value="Operating Service Fee"></td>
+                <td><input type="number" class="qty" value="1" oninput="calc()"></td>
+                <td><input type="number" class="rate" value="0" oninput="calc()"></td>
+                <td class="row-amt" style="text-align: right; font-weight: bold;">$0.00</td>
+                <td></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="summary-box">
+        <div class="summary-row"><span>SUBTOTAL</span><span id="subtotal" style="font-weight: bold;">$0.00</span></div>
+        <div class="summary-row"><span>TAX RATE</span><span>0.000%</span></div>
+        <div class="summary-row" style="font-weight: bold; border-top: 2px solid #000; margin-top: 10px; padding-top: 10px; font-size: 18px; color: #000;">
+            <span>TOTAL</span><span id="grandTotal">$0.00</span>
+        </div>
+    </div>
+
+    <div class="bank-info">
+        <strong style="font-size: 18px; color: #000; display: block; margin-bottom: 10px;">Bank Information</strong>
+        <div style="font-size: 15px; line-height: 1.8;">
+            Beneficiary's name: <strong>LEI JIAN</strong><br>
+            Beneficiary's A/C No.: <strong>6214835893781466</strong><br>
+            Beneficiary's Bank: <strong>China Merchants Bank, H.O. Shenzhen, China</strong><br>
+            SWIFT Code: <strong>CMBCCNBS</strong>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 保持原有的 JavaScript 逻辑不变
+    function init() {
+        const now = new Date();
+        const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+        document.getElementById('invDate').value = `${now.getFullYear()}/${now.getMonth()+1}/${now.getDate()}`;
+        document.getElementById('invNum').value = months[now.getMonth()] + '001';
+        const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 8);
+        document.getElementById('dueDate').value = `${nextMonth.getFullYear()}/${nextMonth.getMonth()+1}/${nextMonth.getDate()}`;
+    }
+
+    function addRow() {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><input type="text" placeholder="Service description..."></td>
+            <td><input type="number" class="qty" value="1" oninput="calc()"></td>
+            <td><input type="number" class="rate" value="0" oninput="calc()"></td>
+            <td class="row-amt" style="text-align: right; font-weight: bold;">$0.00</td>
+            <td style="text-align:center"><button onclick="this.parentElement.parentElement.remove(); calc();" style="color:#ff4d4f; border:none; background:none; cursor:pointer; font-size:20px;">×</button></td>
+        `;
+        document.getElementById('tableBody').appendChild(tr);
+    }
+
+    function calc() {
+        let total = 0;
+        document.querySelectorAll('#tableBody tr').forEach(row => {
+            const q = row.querySelector('.qty').value || 0;
+            const r = row.querySelector('.rate').value || 0;
+            const amt = q * r;
+            row.querySelector('.row-amt').innerText = '$' + amt.toLocaleString('en-US', {minimumFractionDigits:2});
+            total += amt;
+        });
+        const formatted = '$' + total.toLocaleString('en-US', {minimumFractionDigits:2});
+        document.getElementById('subtotal').innerText = formatted;
+        document.getElementById('grandTotal').innerText = formatted;
+    }
+
+    function exportPDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        doc.setFontSize(14);
+        doc.setFont(undefined, 'bold');
+        doc.text("Personal Service", 14, 20);
+        doc.setFont(undefined, 'normal');
+        doc.setFontSize(12);
+        doc.text("LEI JIAN", 14, 27);
+        doc.setFontSize(11);
+        doc.text(["Hangzhou City, Zhejiang Province, China", "Phone: 0086-13588213363", "Email: hileolane@gmail.com"], 14, 34);
+
+        doc.setFontSize(30);
+        doc.setFont(undefined, 'bold');
+        doc.text("INVOICE", 196, 25, { align: 'right' });
+        doc.setFont(undefined, 'normal');
+        doc.setFontSize(11);
+        doc.text(`DATE: ${document.getElementById('invDate').value}`, 196, 36, { align: 'right' });
+        doc.text(`INVOICE #: ${document.getElementById('invNum').value}`, 196, 42, { align: 'right' });
+        doc.text(`DUE DATE: ${document.getElementById('dueDate').value}`, 196, 48, { align: 'right' });
+
+        doc.setFillColor(242, 242, 242);
+        doc.rect(14, 58, 90, 8, 'F');
+        doc.setFont(undefined, 'bold');
+        doc.setFontSize(12);
+        doc.text("BILL TO", 16, 63.5);
+        
+        doc.setFont(undefined, 'normal');
+        doc.setFontSize(11);
+        doc.text("Ing. Blanka Mikulášková", 14, 72);
+        doc.setFont(undefined, 'bold');
+        doc.setFontSize(14);
+        doc.text("AMIT Service s.r.o.", 14, 79);
+        doc.setFont(undefined, 'normal');
+        doc.setFontSize(11);
+        doc.text(["Radlická 740/113C, Praha 5, 158 00", "DIC: CZ21260257"], 14, 85);
+
+        const body = [];
+        document.querySelectorAll('#tableBody tr').forEach(row => {
+            body.push([
+                row.querySelector('input[type="text"]').value,
+                row.querySelector('.qty').value,
+                "$" + parseFloat(row.querySelector('.rate').value).toLocaleString('en-US', {minimumFractionDigits:2}),
+                row.querySelector('.row-amt').innerText
+            ]);
+        });
+
+        doc.autoTable({
+            startY: 100,
+            head: [['DESCRIPTION', 'MONTH', 'RATE', 'AMOUNT']],
+            body: body,
+            theme: 'grid',
+            headStyles: { fillColor: [230, 230, 230], textColor: [0, 0, 0], lineWidth: 0.1, fontSize: 11 },
+            styles: { fontSize: 11, cellPadding: 3, textColor: [0, 0, 0] },
+            columnStyles: { 3: { halign: 'right', fontStyle: 'bold' } }
+        });
+
+        let finalY = doc.lastAutoTable.finalY + 12;
+        doc.setFontSize(11);
+        doc.text(`SUBTOTAL:`, 130, finalY);
+        doc.text(document.getElementById('subtotal').innerText, 196, finalY, { align: 'right' });
+        doc.text(`TAX RATE: 0.000%`, 130, finalY + 7);
+        doc.setLineWidth(0.8);
+        doc.line(130, finalY + 11, 196, finalY + 11);
+        doc.setFont(undefined, 'bold');
+        doc.setFontSize(14);
+        doc.text(`TOTAL:`, 130, finalY + 18);
+        doc.text(document.getElementById('grandTotal').innerText, 196, finalY + 18, { align: 'right' });
+
+        finalY += 45;
+        doc.setFontSize(14);
+        doc.setFont(undefined, 'bold');
+        doc.text("Bank Information", 14, finalY);
+        doc.setFont(undefined, 'normal');
+        doc.setFontSize(12);
+        const bankInfo = [
+            "Beneficiary's name: LEI JIAN",
+            "Beneficiary's A/C No.: 6214835893781466",
+            "Beneficiary's Bank: China Merchants Bank, H.O. Shenzhen, China",
+            "SWIFT Code: CMBCCNBS"
+        ];
+        doc.text(bankInfo, 14, finalY + 10);
+
+        doc.save(`Invoice_${document.getElementById('invNum').value}.pdf`);
+    }
+    init();
+</script>
+
+</body>
+</html>
