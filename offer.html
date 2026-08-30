@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <title>AMiT Quote Comparison Expert - Smart Anonymize Edition</title>
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    <!-- 引入基础依赖库 -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
     
     <style>
         body { font-family: 'Arial', sans-serif; padding: 30px; background-color: #f4f4f9; color: #333; }
@@ -16,7 +17,9 @@
         .options-group { margin: 20px 0; padding: 15px; background: #ebf5fb; border-radius: 6px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size: 14px; }
         .opt-row { display: flex; align-items: center; gap: 10px; }
         .full-row { grid-column: span 2; border-top: 1px solid #d4e6f1; padding-top: 15px; margin-top: 5px; }
-        .select-input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-family: 'Arial'; width: 260px; background: white; cursor: pointer; font-weight: bold; color: #2980b9; }
+        .select-input, .num-input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-family: 'Arial'; background: white; font-weight: bold; color: #2980b9; }
+        .select-input { width: 260px; cursor: pointer; }
+        .num-input { width: 70px; text-align: center; }
         #fileList { font-size: 13px; background: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0; border: 1px solid #eee; }
         .file-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee; }
         .btn-open-file { background: #95a5a6; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold; }
@@ -30,29 +33,51 @@
         .chart-wrapper { position: relative; height: 450px; width: 100%; margin-top: 25px; }
         .btn-download-img { background: #8e44ad; color: white; margin-top: 25px; display: inline-block; padding: 12px 30px; font-size: 13px; border-radius: 25px; border: none; cursor: pointer; font-weight: bold; }
         .policy-text { color: #2980b9; font-weight: bold; }
+
+        /* Modal Styles */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-content { background: white; width: 90%; max-width: 650px; border-radius: 10px; padding: 25px; box-shadow: 0 5px 20px rgba(0,0,0,0.2); max-height: 80vh; display: flex; flex-direction: column; }
+        .modal-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #f0f0f0; padding-bottom: 15px; margin-bottom: 15px; }
+        .modal-title { font-size: 18px; font-weight: bold; color: #2c3e50; display: flex; align-items: center; gap: 8px; }
+        .modal-body { overflow-y: auto; flex: 1; font-size: 13px; line-height: 1.6; padding-right: 5px; }
+        .issue-card { background: #fff5f5; border-left: 4px solid #e74c3c; padding: 10px 15px; border-radius: 4px; margin-bottom: 10px; }
+        .issue-card.warning { background: #fffbe6; border-left-color: #f1c40f; }
+        .issue-title { font-weight: bold; color: #c0392b; margin-bottom: 3px; }
+        .issue-card.warning .issue-title { color: #d35400; }
+        .issue-desc { color: #555; }
+        .modal-footer { display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid #f0f0f0; padding-top: 15px; margin-top: 15px; }
+        .btn-modal { padding: 10px 20px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; font-size: 13px; }
+        .btn-cancel { background: #ecf0f1; color: #7f8c8d; }
+        .btn-cancel:hover { background: #bdc3c7; }
+        .btn-confirm { background: #e74c3c; color: white; }
+        .btn-confirm:hover { background: #c0392b; }
+        .btn-ok { background: #27ae60; color: white; }
+        .btn-ok:hover { background: #219150; }
+        .success-box { text-align: center; padding: 30px 10px; color: #27ae60; }
+        .success-icon { font-size: 48px; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2>Quote Summary & Analysis</h2>
+    <h2>Quote Summary &amp; Analysis</h2>
     
     <div class="drop-zone" id="dropZone">
-        <strong>Drag & Drop Files Here</strong> or <strong>Click to Select</strong>
+        <strong>Drag &amp; Drop Files Here</strong> or <strong>Click to Select</strong>
         <input type="file" id="fileInput" multiple accept=".xlsx, .xls" style="display:none">
     </div>
 
     <div class="options-group">
         <div class="opt-row">
-            <label>Primary Sort & Group By:</label>
+            <label>Primary Sort &amp; Group By:</label>
             <select id="sortHeaderSelect" class="select-input">
-                <option value="Part Code">Part Code (Default)</option>
+                <option value="">-- Upload Files First --</option>
             </select>
         </div>
         <div class="opt-row">
             <label>Price Column Reference:</label>
             <select id="priceHeaderSelect" class="select-input">
-                <option value="Unit Price">Unit Price (Default)</option>
+                <option value="">-- Upload Files First --</option>
             </select>
         </div>
         <div class="opt-row">
@@ -62,9 +87,21 @@
         <div class="opt-row" style="display:none;">
             <input type="checkbox" id="anonymizeCompetitors">
         </div>
+        
         <div class="opt-row full-row">
-            <label><strong>D/C Policy:</strong> <span class="policy-text">Strictly 23+</span> (Any D/C < 23 will be removed).</label>
+            <label><strong>D/C Policy:</strong> Strictly 
+                <input type="number" id="dcLimitInput" class="num-input" value="23" min="0" max="99">+ 
+                <span class="policy-text">(Any D/C &lt; <span id="dcLimitText">23</span> will be removed).</span>
+            </label>
         </div>
+
+        <div class="opt-row full-row">
+            <label><strong>Price Anomaly Threshold:</strong> Rank 1 lower than Market Avg by 
+                <input type="number" id="anomalyThresholdInput" class="num-input" value="50" min="10" max="90">%+ 
+                <span class="policy-text">(Triggers anomaly warning for sub/old-stock/unit-error).</span>
+            </label>
+        </div>
+        
         <div class="opt-row full-row">
             <label><strong>Target Supplier for Feedback:</strong></label>
             <select id="targetSupplierSelect" class="select-input">
@@ -77,7 +114,7 @@
     
     <div class="btn-group">
         <button id="clearBtn" class="btn btn-clear" disabled>Clear All</button>
-        <button id="processBtn" class="btn btn-process" disabled>Analyze & Summary</button>
+        <button id="processBtn" class="btn btn-process" disabled>Analyze &amp; Summary</button>
         <button id="feedbackBtn" class="btn btn-feedback" disabled>Export Feedback</button>
     </div>
 
@@ -85,6 +122,21 @@
         <h3 id="chartTitle" style="color: #2c3e50; margin: 0;">Supplier Competitiveness Analysis</h3>
         <div class="chart-wrapper"><canvas id="analysisChart"></canvas></div>
         <button id="downloadChartBtn" class="btn-download-img">🖼 Download Analysis Chart (PNG)</button>
+    </div>
+</div>
+
+<!-- 数据合理性校验模态框 UI -->
+<div class="modal-overlay" id="validationModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <div class="modal-title" id="modalTitle">🔍 数据合理性复查结果</div>
+        </div>
+        <div class="modal-body" id="modalBody">
+            <!-- 动态填充校验结果 -->
+        </div>
+        <div class="modal-footer" id="modalFooter">
+            <!-- 动态填充操作按钮 -->
+        </div>
     </div>
 </div>
 
@@ -102,13 +154,24 @@
     const visualArea = document.getElementById('visualArea');
     const ignoreEmptyCheckbox = document.getElementById('ignoreEmptyPrice');
     const anonymizeCheckbox = document.getElementById('anonymizeCompetitors');
+    const dcLimitInput = document.getElementById('dcLimitInput');
+    const dcLimitText = document.getElementById('dcLimitText');
+    const anomalyThresholdInput = document.getElementById('anomalyThresholdInput');
+
+    const validationModal = document.getElementById('validationModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalBody = document.getElementById('modalBody');
+    const modalFooter = document.getElementById('modalFooter');
 
     let filesToProcess = [];
     let myChart = null;
 
     Chart.register(ChartDataLabels);
 
-    const DC_LIMIT = 23; 
+    // 监听 D/C 输入框更新提示文本
+    dcLimitInput.addEventListener('input', (e) => {
+        dcLimitText.textContent = e.target.value || '0';
+    });
 
     ['dragover', 'dragleave', 'drop', 'click'].forEach(evt => {
         if(evt === 'click') dropZone.addEventListener('click', () => fileInput.click());
@@ -142,22 +205,31 @@
                 const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
                 const ws = workbook.Sheets[workbook.SheetNames[0]];
                 const raw = XLSX.utils.sheet_to_json(ws, { header: 1 });
-                let headerRow = raw.find(row => row.some(cell => String(cell).includes("Part Code")));
+                
+                let headerRow = raw.find(row => row.some(cell => cell && String(cell).trim() !== ""));
+                
                 if (headerRow) {
                     const curPrice = priceHeaderSelect.value;
                     const curSort = sortHeaderSelect.value;
-                    priceHeaderSelect.innerHTML = ''; sortHeaderSelect.innerHTML = '';
+                    
+                    priceHeaderSelect.innerHTML = ''; 
+                    sortHeaderSelect.innerHTML = '';
+                    
                     headerRow.forEach(h => {
-                        if (!h) return;
-                        const hStr = String(h);
-                        const sOpt = document.createElement('option'); sOpt.value = hStr; sOpt.textContent = hStr;
-                        if (hStr === curSort || hStr === "NO.") sOpt.selected = true;
+                        if (h === null || h === undefined || String(h).trim() === "") return;
+                        const hStr = String(h).trim();
+                        
+                        const sOpt = document.createElement('option'); 
+                        sOpt.value = hStr; 
+                        sOpt.textContent = hStr;
+                        if (hStr === curSort || hStr.toLowerCase().includes("part") || hStr.toUpperCase() === "NO.") sOpt.selected = true;
                         sortHeaderSelect.appendChild(sOpt);
-                        if (hStr.toLowerCase().includes("price")) {
-                            const pOpt = document.createElement('option'); pOpt.value = hStr; pOpt.textContent = hStr;
-                            if (hStr === curPrice || hStr === "Unit Price") pOpt.selected = true;
-                            priceHeaderSelect.appendChild(pOpt);
-                        }
+
+                        const pOpt = document.createElement('option'); 
+                        pOpt.value = hStr; 
+                        pOpt.textContent = hStr;
+                        if (hStr === curPrice || hStr.toLowerCase().includes("price")) pOpt.selected = true;
+                        priceHeaderSelect.appendChild(pOpt);
                     });
                 }
                 resolve();
@@ -204,7 +276,9 @@
 
     async function getRawData(priceKey) {
         const ignore = ignoreEmptyCheckbox.checked;
+        const currentDcLimit = parseInt(dcLimitInput.value) || 0;
         let all = [];
+        
         for (let file of filesToProcess) {
             const rows = await new Promise(resolve => {
                 const reader = new FileReader();
@@ -212,7 +286,8 @@
                     const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
                     const ws = wb.Sheets[wb.SheetNames[0]];
                     const raw = XLSX.utils.sheet_to_json(ws, { header: 1 });
-                    let hIdx = raw.findIndex(r => r.some(c => String(c).includes("Part Code")));
+                    
+                    let hIdx = raw.findIndex(r => r.some(c => c && String(c).trim() !== ""));
                     const json = XLSX.utils.sheet_to_json(ws, { range: hIdx, defval: "" });
                     const sup = file.name.replace(/\.[^/.]+$/, "");
                     
@@ -225,20 +300,21 @@
                                 const match = dcValue.match(/^\d{1,2}/); 
                                 if (match) {
                                     const year = parseInt(match[0]);
-                                    if (year < DC_LIMIT) cleanedItem._isExpiredDC = true;
+                                    if (year < currentDcLimit) cleanedItem._isExpiredDC = true;
                                 }
                             }
-                            if (key.toLowerCase().includes("price")) {
+                            if (key === priceKey || key.toLowerCase().includes("price")) {
                                 const val = parseFloat(String(i[key]).replace(/[^0-9.]/g, ''));
                                 cleanedItem[key] = (isNaN(val) || val === 0) ? null : val;
-                                if (key === priceKey) {
-                                    cleanedItem._isValid = (cleanedItem[key] !== null && !cleanedItem._isExpiredDC);
-                                    cleanedItem._cleanPrice = cleanedItem._isValid ? cleanedItem[key] : Infinity;
-                                }
                             }
                         });
+
+                        const selectedPrice = cleanedItem[priceKey];
+                        cleanedItem._isValid = (selectedPrice !== null && selectedPrice !== undefined && !isNaN(selectedPrice) && !cleanedItem._isExpiredDC);
+                        cleanedItem._cleanPrice = cleanedItem._isValid ? selectedPrice : Infinity;
+
                         return cleanedItem;
-                    }).filter(i => i['Part Code'] && !i._isExpiredDC && (!ignore || i._isValid)));
+                    }).filter(i => !i._isExpiredDC && (!ignore || i._isValid)));
                 };
                 reader.readAsArrayBuffer(file);
             });
@@ -272,11 +348,11 @@
             const { _cleanPrice, _isValid, Supplier, _isExpiredDC, ...rest } = row;
             const newRow = {};
             const keys = Object.keys(rest);
-            const firstPriceCol = keys.find(k => k.toLowerCase().includes("price")) || priceKey;
+            const targetPriceCol = keys.find(k => k === priceKey) || keys.find(k => k.toLowerCase().includes("price")) || priceKey;
             
             keys.forEach(k => {
                 newRow[k] = rest[k];
-                if (k === firstPriceCol) {
+                if (k === targetPriceCol) {
                     if (_isValid) { newRow["Rank"] = currentRank; newRow["Supplier"] = Supplier; }
                     else {
                         if (isFirstInGroup && !groupStatus[groupValue].hasValid) { newRow["Rank"] = "No Offer"; newRow["Supplier"] = ""; }
@@ -288,23 +364,173 @@
         });
     }
 
-    // --- 新逻辑绑定 ---
+    // 核心数据合理性校验逻辑
+    function validateDataIntegrity(data, groupKey, priceKey) {
+        const issues = [];
+        const groups = {};
+        const thresholdPercent = parseFloat(anomalyThresholdInput.value) || 50;
+
+        // 1. 检查文件名是否存在明显的同厂重复上传
+        const fileNames = filesToProcess.map(f => f.name);
+        const nameCount = {};
+        fileNames.forEach(fn => { nameCount[fn] = (nameCount[fn] || 0) + 1; });
+        Object.keys(nameCount).forEach(fn => {
+            if (nameCount[fn] > 1) {
+                issues.push({
+                    type: 'error',
+                    title: '文件重复上传警示',
+                    desc: `您上传了 ${nameCount[fn]} 次相同的文件 "${fn}"，这会导致导出数据中出现大量同厂商的重复报价。`
+                });
+            }
+        });
+
+        // 2. 按分组字段 (Part No.) 聚合导出行，排查排名异常与价格偏差
+        data.forEach(item => {
+            const groupVal = item[groupKey];
+            if (!groupVal) return;
+            if (!groups[groupVal]) groups[groupVal] = [];
+            groups[groupVal].push(item);
+        });
+
+        Object.keys(groups).forEach(pNo => {
+            const list = groups[pNo];
+            
+            // 规则 A：校验同一个产品下，相同供应商是否占用了多个有效排名（如 Rank 1 和 Rank 2 为同一家）
+            const supplierRanks = {};
+            list.forEach(row => {
+                const sup = row["Supplier"];
+                const rank = row["Rank"];
+                if (sup && rank && rank !== "No Offer") {
+                    if (!supplierRanks[sup]) supplierRanks[sup] = [];
+                    supplierRanks[sup].push(rank);
+                }
+            });
+
+            Object.keys(supplierRanks).forEach(sup => {
+                if (supplierRanks[sup].length > 1) {
+                    issues.push({
+                        type: 'error',
+                        title: '同供应商多重排名异常',
+                        desc: `产品 <strong>"${pNo}"</strong> 下，供应商 <strong>"${sup}"</strong> 出现了 ${supplierRanks[sup].length} 次排名 (Rank ${supplierRanks[sup].join(', ')})，疑似重复上传了相同或不同版本的报价表格。`
+                    });
+                }
+            });
+
+            // 规则 B：基于【非 Rank 1 报价均值】进行超低价异常识别 (替换物料/老年份库存/单位错误)
+            const rankedRows = list.filter(r => typeof r["Rank"] === 'number').sort((a,b) => a.Rank - b.Rank);
+            if (rankedRows.length >= 2) {
+                const targetPriceCol = Object.keys(rankedRows[0]).find(k => k === priceKey) || Object.keys(rankedRows[0]).find(k => k.toLowerCase().includes("price")) || priceKey;
+                
+                const rank1Price = parseFloat(rankedRows[0][targetPriceCol]);
+                const rank1Supplier = rankedRows[0]["Supplier"] || "未知供应商";
+
+                // 计算非 Rank 1 的其余合格报价均值
+                const otherPrices = rankedRows.slice(1).map(r => parseFloat(r[targetPriceCol])).filter(p => !isNaN(p) && p > 0);
+                
+                if (!isNaN(rank1Price) && rank1Price > 0 && otherPrices.length > 0) {
+                    const otherAvg = otherPrices.reduce((a, b) => a + b, 0) / otherPrices.length;
+                    
+                    // 计算 Rank 1 比市场均值低了百分之多少
+                    const dropRatio = ((otherAvg - rank1Price) / otherAvg) * 100;
+
+                    if (dropRatio >= thresholdPercent) {
+                        issues.push({
+                            type: 'warning',
+                            title: 'Rank 1 异常低价警告 (疑似替代物料/老库存/单位错位)',
+                            desc: `产品 <strong>"${pNo}"</strong> 的 Rank 1 报价为 <strong>$${rank1Price.toFixed(4)}</strong> (${rank1Supplier})，比其他同行报价均值 (<strong>$${otherAvg.toFixed(4)}</strong>) 偏低了 <strong>${dropRatio.toFixed(1)}%</strong> (已超过设定阀值 ${thresholdPercent}%)。<br>👉 <strong>建议排查：</strong>该报价是否为替换品牌替代物料、老年份(旧DC)库存甩卖、或包装单位(如 K/PCS)填错。`
+                        });
+                    }
+                }
+            }
+        });
+
+        return issues;
+    }
+
+    // 交互弹窗逻辑处理
+    function handleExportWithValidation(issues, exportCallback) {
+        modalBody.innerHTML = '';
+        modalFooter.innerHTML = '';
+
+        if (issues.length === 0) {
+            modalTitle.innerHTML = '✅ 数据合理性复查通过';
+            modalBody.innerHTML = `
+                <div class="success-box">
+                    <div class="success-icon">🎉</div>
+                    <div style="font-size:16px; font-weight:bold; color:#2c3e50;">检查无误，请点击下载！</div>
+                    <p style="color:#7f8c8d; margin-top:8px;">系统未检测到同厂商重复报价、超低异常价差或文件重复导入等问题。</p>
+                </div>
+            `;
+            
+            const btnOk = document.createElement('button');
+            btnOk.className = 'btn-modal btn-ok';
+            btnOk.textContent = '📥 立即下载文件';
+            btnOk.onclick = () => {
+                closeModal();
+                exportCallback();
+            };
+            modalFooter.appendChild(btnOk);
+        } else {
+            modalTitle.innerHTML = '🚨 检测到潜在数据异常';
+            
+            let html = '<p style="margin-bottom:12px; color:#e74c3c; font-weight:bold;">系统在导出前把关时发现了以下异常点，请确认是否包含误操作：</p>';
+            issues.forEach(iss => {
+                const cardClass = iss.type === 'warning' ? 'issue-card warning' : 'issue-card';
+                html += `
+                    <div class="${cardClass}">
+                        <div class="issue-title">${iss.title}</div>
+                        <div class="issue-desc">${iss.desc}</div>
+                    </div>
+                `;
+            });
+            modalBody.innerHTML = html;
+
+            const btnCancel = document.createElement('button');
+            btnCancel.className = 'btn-modal btn-cancel';
+            btnCancel.textContent = '取消并检查文件';
+            btnCancel.onclick = closeModal;
+
+            const btnForce = document.createElement('button');
+            btnForce.className = 'btn-modal btn-confirm';
+            btnForce.textContent = '忽略警告，仍要下载';
+            btnForce.onclick = () => {
+                closeModal();
+                exportCallback();
+            };
+
+            modalFooter.appendChild(btnCancel);
+            modalFooter.appendChild(btnForce);
+        }
+
+        validationModal.style.display = 'flex';
+    }
+
+    function closeModal() {
+        validationModal.style.display = 'none';
+    }
+
     processBtn.onclick = async () => {
-        anonymizeCheckbox.checked = false; // Analyze & Summary 默认不隐藏名字
+        anonymizeCheckbox.checked = false;
         const priceK = priceHeaderSelect.value;
         const groupK = sortHeaderSelect.value;
         const raw = await getRawData(priceK);
         if (raw.length === 0) return alert("No valid data!");
+        
         renderVisual(raw);
         const finalData = processSummaryData(raw, groupK, priceK);
-        exportXLS(finalData, "Summary_Report");
+
+        // 导出前把关校验
+        const issues = validateDataIntegrity(finalData, groupK, priceK);
+        handleExportWithValidation(issues, () => {
+            exportXLS(finalData, "Summary_Report");
+        });
     };
 
     feedbackBtn.onclick = async () => {
         const targetS = supplierSelect.value;
         if (!targetS) return alert("Select target supplier first!");
         
-        anonymizeCheckbox.checked = true; // Feedback 默认自动隐藏名字
+        anonymizeCheckbox.checked = true;
         const priceK = priceHeaderSelect.value;
         const groupK = sortHeaderSelect.value;
         const raw = await getRawData(priceK);
@@ -324,22 +550,27 @@
             const targetRow = rows.find(r => r.Supplier === targetS);
             if (targetRow) {
                 const bestRow = rows[0];
-                fRows.push(formatFeedbackRow(bestRow, targetS, "Best Reference", ""));
+                fRows.push(formatFeedbackRow(bestRow, targetS, "Best Reference", "", priceK));
                 let d = (bestRow.Supplier === targetS) ? 0 : (targetRow._cleanPrice - bestRow._cleanPrice)/bestRow._cleanPrice;
-                fRows.push(formatFeedbackRow(targetRow, targetS, targetS, d));
+                fRows.push(formatFeedbackRow(targetRow, targetS, targetS, d, priceK));
             }
         });
-        exportXLS(fRows, "Feedback_Report");
+
+        // 导出前把关校验
+        const issues = validateDataIntegrity(fRows, groupK, priceK);
+        handleExportWithValidation(issues, () => {
+            exportXLS(fRows, "Feedback_Report");
+        });
     };
 
-    function formatFeedbackRow(r, targetS, displaySupplier, diff) {
+    function formatFeedbackRow(r, targetS, displaySupplier, diff, priceKey) {
         const { _cleanPrice, _isValid, Supplier, _isExpiredDC, ...rest } = r;
         const newRow = {};
         const keys = Object.keys(rest);
-        const firstPriceCol = keys.find(k => k.toLowerCase().includes("price")) || "Price";
+        const targetPriceCol = keys.find(k => k === priceKey) || keys.find(k => k.toLowerCase().includes("price")) || "Price";
         keys.forEach(k => {
             newRow[k] = rest[k];
-            if (k === firstPriceCol) { newRow["Supplier"] = displaySupplier; newRow["Diff %"] = diff; }
+            if (k === targetPriceCol) { newRow["Supplier"] = displaySupplier; newRow["Diff %"] = diff; }
         });
         return newRow;
     }
@@ -420,6 +651,5 @@
         l.click();
     };
 </script>
-
 </body>
 </html>

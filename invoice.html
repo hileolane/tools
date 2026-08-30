@@ -75,18 +75,18 @@
             <tr>
                 <td><input type="text" value="Operating Service Fee"></td>
                 <td><input type="number" class="qty" value="1" oninput="calc()"></td>
-                <td><input type="number" class="rate" value="0" oninput="calc()"></td>
-                <td class="row-amt" style="text-align: right; font-weight: bold;">$0.00</td>
+                <td><input type="number" class="rate" value="2040" oninput="calc()"></td>
+                <td class="row-amt" style="text-align: right; font-weight: bold;">$2,040.00</td>
                 <td></td>
             </tr>
         </tbody>
     </table>
 
     <div class="summary-box">
-        <div class="summary-row"><span>SUBTOTAL</span><span id="subtotal" style="font-weight: bold;">$0.00</span></div>
+        <div class="summary-row"><span>SUBTOTAL</span><span id="subtotal" style="font-weight: bold;">$2,040.00</span></div>
         <div class="summary-row"><span>TAX RATE</span><span>0.000%</span></div>
         <div class="summary-row" style="font-weight: bold; border-top: 2px solid #000; margin-top: 10px; padding-top: 10px; font-size: 18px; color: #000;">
-            <span>TOTAL</span><span id="grandTotal">$0.00</span>
+            <span>TOTAL</span><span id="grandTotal">$2,040.00</span>
         </div>
     </div>
 
@@ -102,7 +102,6 @@
 </div>
 
 <script>
-    // 保持原有的 JavaScript 逻辑不变
     function init() {
         const now = new Date();
         const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
@@ -142,6 +141,7 @@
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         
+        // 头部
         doc.setFontSize(14);
         doc.setFont(undefined, 'bold');
         doc.text("Personal Service", 14, 20);
@@ -151,6 +151,7 @@
         doc.setFontSize(11);
         doc.text(["Hangzhou City, Zhejiang Province, China", "Phone: 0086-13588213363", "Email: hileolane@gmail.com"], 14, 34);
 
+        // INVOICE 加粗
         doc.setFontSize(30);
         doc.setFont(undefined, 'bold');
         doc.text("INVOICE", 196, 25, { align: 'right' });
@@ -160,6 +161,7 @@
         doc.text(`INVOICE #: ${document.getElementById('invNum').value}`, 196, 42, { align: 'right' });
         doc.text(`DUE DATE: ${document.getElementById('dueDate').value}`, 196, 48, { align: 'right' });
 
+        // Bill To
         doc.setFillColor(242, 242, 242);
         doc.rect(14, 58, 90, 8, 'F');
         doc.setFont(undefined, 'bold');
@@ -176,6 +178,7 @@
         doc.setFontSize(11);
         doc.text(["Radlická 740/113C, Praha 5, 158 00", "DIC: CZ21260257"], 14, 85);
 
+        // 表格 (减小 cellPadding)
         const body = [];
         document.querySelectorAll('#tableBody tr').forEach(row => {
             body.push([
@@ -192,10 +195,11 @@
             body: body,
             theme: 'grid',
             headStyles: { fillColor: [230, 230, 230], textColor: [0, 0, 0], lineWidth: 0.1, fontSize: 11 },
-            styles: { fontSize: 11, cellPadding: 3, textColor: [0, 0, 0] },
+            styles: { fontSize: 11, cellPadding: 3, textColor: [0, 0, 0] }, // 缩减到 3
             columnStyles: { 3: { halign: 'right', fontStyle: 'bold' } }
         });
 
+        // 结算
         let finalY = doc.lastAutoTable.finalY + 12;
         doc.setFontSize(11);
         doc.text(`SUBTOTAL:`, 130, finalY);
@@ -208,6 +212,7 @@
         doc.text(`TOTAL:`, 130, finalY + 18);
         doc.text(document.getElementById('grandTotal').innerText, 196, finalY + 18, { align: 'right' });
 
+        // 银行信息
         finalY += 45;
         doc.setFontSize(14);
         doc.setFont(undefined, 'bold');
@@ -222,7 +227,9 @@
         ];
         doc.text(bankInfo, 14, finalY + 10);
 
-        doc.save(`Invoice_${document.getElementById('invNum').value}.pdf`);
+        // 修改保存文件名格式为：Inv. AMiT [INVOICE_NUM].pdf
+        const invNum = document.getElementById('invNum').value;
+        doc.save(`Inv. AMiT ${invNum}.pdf`);
     }
     init();
 </script>
